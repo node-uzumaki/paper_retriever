@@ -21,10 +21,3 @@ import xml.etree.ElementTree as et
 #     if "keywords" in path :
 #         with open('respons','w') as f:
 #             print(path, file=f)        
-elif self.base == "elsevier":                
-    tag_list = inner_page.find_all("div", {"class":"keyword"})
-if tag_list:
-    keywords = list(map(lambda x: x.text.strip(), tag_list))
-else:
-    `raise BaseUndefinedError(self.base)  
-printd("Keywords: ", keywords)
