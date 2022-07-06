@@ -1,12 +1,9 @@
 
 import requests
-import json
 import pandas as pd
-import httpx
-from xml.etree import ElementTree
-from urllib.request import urlretrieve
+import xml.etree.ElementTree as ET
 from urllib.error import HTTPError
-
+from text_extractor import text_extract
 # retrieve using scopus
 base_url = "https://api.elsevier.com/content/search/scopus"
 apiKey = "45c6063a93408d8c4f3925dcf8e02e01"
@@ -22,53 +19,56 @@ headers_xml = {
     'Accept': 'application/xml'
 }
 
+ns = {  
+        'bk': 'http://www.elsevier.com/xml/bk/dtd', 
+        'cals': 'http://www.elsevier.com/xml/common/cals/dtd', 
+        'ce': 'http://www.elsevier.com/xml/common/dtd', 
+        'ja': 'http://www.elsevier.com/xml/ja/dtd', 
+        'mml': 'http://www.w3.org/1998/Math/MathML',
+        'sa': 'http://www.elsevier.com/xml/common/struct-aff/dtd',
+        'sb': 'http://www.elsevier.com/xml/common/struct-bib/dtd', 
+        'tb': 'http://www.elsevier.com/xml/common/table/dtd', 
+        'xlink': 'http://www.w3.org/1999/xlink', 'xocs': 'http://www.elsevier.com/xml/xocs/dtd', 
+        'dc': 'http://purl.org/dc/elements/1.1/', 
+        'dcterms': 'http://purl.org/dc/terms/', 
+        'prism': 'http://prismstandard.org/namespaces/basic/2.0/', 
+        'xsi': 'http://www.w3.org/2001/XMLSchema-instance', 
+        'e': 'http://www.elsevier.com/xml/svapi/article/dtd'
+    }
 
-def get_xml(paper_doi):
+
+def get_xml(paper_doi,folder_name):
      
-    url =  'https://api.elsevier.com/content/article/doi/' + paper_doi+ '?apiKey='+headers_xml['X-ELS-APIKey']+'&httpAccept='+headers_xml['Accept']
+    url =  'https://api.elsevier.com/content/article/doi/' + paper_doi
     try:
-        file_path = f'C:/Users/user/Downloads/elsevier-retrieve-papers-master/paper_retrieval/XML_Beh/'+ '.'.join(paper_doi.split('/'))
-        urlretrieve(url,filename=file_path)
-    
+        r = requests.get(url,headers=headers_xml)
+        print(r.status_code)
+        tree = tree = ET.ElementTree(ET.fromstring(r.text))
+        print(tree.getroot().nsmap)
+  
     except HTTPError as e:
         print(e)
-        with open('C:/Users/user/Downloads/elsevier-retrieve-papers-master/paper_retrieval/Beh_404.txt', 'a') as f:
-            print(paper_doi,file=f,flush=False)
 
 
-def get_doi(query, entry,j,start):  
+# def get_doi(query, entry,j,start):  
     
-    count = 200
-    response = requests.get(
-        f'https://api.elsevier.com/content/search/scopus?query={query}&start={start}&count={count}',
-        headers=headers
-    )
-    response_json = response.json()
-    try:
-        doi = response_json['search-results']['entry'][entry]['prism:doi']
-    except:
-        with open('./OC_404_doi.txt', 'a') as f:
-            print(entry,file=f,flush=False)
-        return None    
+#     count = 200
+#     response = requests.get(
+#         f'https://api.elsevier.com/content/search/scopus?query={query}&start={start}&count={count}',
+#         headers=headers
+#     )
+#     response_json = response.json()
+#     try:
+#         doi = response_json['search-results']['entry'][entry]['prism:doi']
+#     except:
+#         with open('./OC_404_doi.txt', 'a') as f:
+#             print(entry,file=f,flush=False)
+#         return None    
 
-    # print(response_json)
-    print(doi)
-    return doi
+#     # print(response_json)
+#     print(doi)
+#     return doi
 
-
-def scopus_paper_date(paper_doi, apiKey=apiKey):
-    timeout = httpx.Timeout(10.0, connect=60.0)
-    client = httpx.Client(timeout=timeout, headers=headers)
-    _query = "&view=FULL"
-    _url = f"https://api.elsevier.com/content/article/doi/" + paper_doi
-    r = client.get(_url)
-    # print(r)
-    if r.status_code == 404:
-        with open('404_doi.txt', 'w') as f:
-            print()
-    return r
-
-iter = 0   
 
 def get_doi_csv(file_path):
     df = pd.read_csv("./scopus.csv",usecols=['Title','DOI'])
@@ -78,9 +78,7 @@ def get_doi_csv(file_path):
 def retrieve_from_scopus():
     for j in range (0,100):
         start = 200 * j 
-    
-        for i in range(0, 200):
-            
+        for i in range(0, 200):   
             query = 'ALL("operational control" AND "thermal comfort" AND ("human" OR "building" OR "occupant"))'
             paper_doi = get_doi_csv(query, i,j,start)
             # y = scopus_paper_date(paper_doi)
@@ -88,24 +86,16 @@ def retrieve_from_scopus():
                 get_xml(paper_doi)
             iter += 1
             print(iter)
-            # if y:
-            #     json_acceptable_string = y.text
-            #     d = json.loads(json_acceptable_string)
-            #     # print()
-            #     file_name = '-'.join(paper_doi.split('/'))
-            #     file_name = '-'.join(paper_doi.split('/'))
-            #     with open(f'./XML_Data/{file_name}.txt', 'w') as fp:
-            #         print(y, file=fp)
-
-            # else:
-            #     print('not able to retrieve')
-
-        # df = pd.DataFrame({'title':title,'url':url})
-        # df.to_csv('papers_info')
 
 
-def retrieve_from_csv(path):
-    paper_dois = get_doi_csv(path)
-    for doi in paper_dois["DOI"]:
-        get_xml(str(doi))
-        print(doi)
+# def get_csv():
+
+
+# def retrieve_from_csv(path):
+#     paper_dois = get_doi_csv(path)
+#     for doi in paper_dois["DOI"]:
+#         get_text(str(doi))
+#         print(doi)
+
+
+get_xml("10.1016/j.scitotenv.2022.155128",'.')
